@@ -1,0 +1,2 @@
+let Inc x = x*(x+1)/2 
+in Print (Inc 6)

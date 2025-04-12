@@ -1,0 +1,6 @@
+let rec fib n x y z =
+          	y > x -> nil | (y > n -> (tryfornext n,print('\n'), print(y) )| tryfornext n)
+        where tryfornext n = fib n x z (z+y)       
+in let fibSeries(p,q) = fib p q 0 1
+in fibSeries(1,30)
+
