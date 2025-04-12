@@ -1,0 +1,4 @@
+let Largest2 = fn (x,y). x ls y -> y | x 
+in let Largest3 = fn (x,y,z). Largest2 (Largest2(x,y),z)
+in Print (Largest3(-3,1456,5))
+

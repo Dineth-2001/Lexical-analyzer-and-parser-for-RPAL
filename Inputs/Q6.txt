@@ -1,0 +1,8 @@
+let rec getpalindrome x y = x > y -> nil | 
+    isPalindrom x -> (getpalindrome (x+1) y , print('\n'), print(x))
+             |getpalindrome (x+1) y
+    
+    where isPalindrom n = n eq (reverse n 0) -> true| false
+    where rec reverse n r = n eq 0 -> r | 
+        reverse (n/10)(r*10 + (n-(n/10)*10))
+in getpalindrome 10 100
