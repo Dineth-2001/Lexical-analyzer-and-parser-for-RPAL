@@ -1,4 +1,7 @@
 from scanner import Scanner
+import token_types
+
+token_types = token_types.TokenType
 
 class Node:
     def __init__(self, label):
@@ -40,6 +43,10 @@ class Parser:
                 cursor = child
 
         self.stack.append(parent)
+        # print("###########################################################")
+        # for i in self.stack:
+        #     i.print_tree()
+        #     print("---------------------------------------------------------")  
 
     def parse(self):
         self.E()
@@ -52,73 +59,84 @@ class Parser:
             raise SyntaxError("Unexpected end of input")
         match self.tokens[-1][1]:
             case 'let':
-                self.read('KEYWORD', 'let')
+                self.read(token_types.KEYWORD, 'let')
                 self.D()
-                self.read('KEYWORD', 'in')
-                self.E()
-                self.build_tree('let', 2)
+                if self.tokens[-1][1] == 'in':
+                    self.read(token_types.KEYWORD, 'in')
+                    self.E()
+                    self.build_tree('let', 2)
+                else:
+                    raise SyntaxError("Expected 'in' after 'let'")
             case 'fn':
-                self.read('KEYWORD', 'fn')
-                n = 1
-                while self.tokens and self.tokens[-1][1] == '(' or self.tokens[-1][0] == 'IDENTIFIER':
+                self.read(token_types.KEYWORD, 'fn')
+                n = 0
+                while self.tokens and self.tokens[-1][1] == '(' or self.tokens[-1][0] == token_types.IDENTIFIER:
                     self.Vb()
                     n += 1
-                self.read('OPERATOR', '.')
-                self.E()
-                self.build_tree('fn', n)
+                if n == 0:
+                    raise SyntaxError("Expected function parameters after 'fn'")
+                
+                if self.tokens and self.tokens[-1][1] == '.':
+                    self.read(token_types.OPERATOR, '.')
+                    self.E()
+                    self.build_tree('lambda', n+1)
             case _:
                 self.Ew()
 
     def Ew(self):
         self.T()
         if self.tokens and self.tokens[-1][1] == 'where':
-            self.read('KEYWORD', 'where')
+            self.read(token_types.KEYWORD, 'where')
             self.Dr()
             self.build_tree('where', 2)
 
     def T(self):
         self.Ta()
-        n = 1
+        n = 0
         while self.tokens and self.tokens[-1][1] == ',':
-            self.read('PUNCTUATION', ',')
+            self.read(token_types.PUNCTUATION, ',')
             self.Ta()
             n += 1
-        if n > 1:
-            self.build_tree('tau', n)
+        if n > 0:
+            self.build_tree('tau', n+1)
 
     def Ta(self):
         self.Tc()
         while self.tokens and self.tokens[-1][1] == 'aug':
-            self.read('KEYWORD', 'aug')
+            self.read(token_types.KEYWORD, 'aug')
             self.Tc()
             self.build_tree('aug', 2)
 
     def Tc(self):
         self.B()
         if self.tokens and self.tokens[-1][1] == '->':
-            self.read('OPERATOR', '->')
+            self.read(token_types.OPERATOR, '->')
             self.Tc()
-            self.read('OPERATOR', '|')
-            self.Tc()
-            self.build_tree('->', 3)
+            token = self.tokens[-1][1]
+            if self.tokens and token == '|':
+                self.read(token_types.OPERATOR, '|')
+                self.Tc()
+                self.build_tree('->', 3)
+            else:
+                raise SyntaxError("Expected '|' after '->'")
 
     def B(self):
         self.Bt()
         while self.tokens and self.tokens[-1][1] == 'or':
-            self.read('KEYWORD', 'or')
+            self.read(token_types.KEYWORD, 'or')
             self.Bt()
             self.build_tree('or', 2)
 
     def Bt(self):
         self.Bs()
         while self.tokens and self.tokens[-1][1] == '&':
-            self.read('PUNCTUATION', '&')
+            self.read(token_types.PUNCTUATION, '&')
             self.Bs()
             self.build_tree('&', 2)
 
     def Bs(self):
         if self.tokens and self.tokens[-1][1] == 'not':
-            self.read('KEYWORD', 'not')
+            self.read(token_types.KEYWORD, 'not')
             self.Bp()
             self.build_tree('not', 1)
         else:
@@ -130,49 +148,67 @@ class Parser:
             return
         token_type, token = self.tokens[-1]
         if token == 'gr' or token == '>':
-            self.read('KEYWORD', 'gr')
+            if self.tokens[-1][1] == 'gr':
+                self.read(token_types.KEYWORD, 'gr')
+            else:
+                self.read(token_types.OPERATOR, '>')
             self.A()
             self.build_tree('gr', 2)
         elif token == 'ge' or token == '>=':
-            self.read('KEYWORD', 'ge')
+            if self.tokens[-1][1] == 'ge':
+                self.read(token_types.KEYWORD, 'ge')
+            else:
+                self.read(token_types.OPERATOR, '>=')
             self.A()
             self.build_tree('ge', 2)
         elif token == 'ls' or token == '<':
-            self.read('KEYWORD', 'ls')
+            if self.tokens[-1][1] == 'ls':
+                self.read(token_types.KEYWORD, 'ls')
+            else:
+                self.read(token_types.OPERATOR, '<')
             self.A()
             self.build_tree('ls', 2)
         elif token == 'le' or token == '<=':
-            self.read('KEYWORD', 'le')
+            if self.tokens[-1][1] == 'le':
+                self.read(token_types.KEYWORD, 'le')
+            else:
+                self.read(token_types.OPERATOR, '<=')
             self.A()
             self.build_tree('le', 2)
         elif token == 'eq':
-            self.read('KEYWORD', 'eq')
+            if self.tokens[-1][1] == 'eq':
+                self.read(token_types.KEYWORD, 'eq')
+            else:
+                self.read(token_types.OPERATOR, '=')
             self.A()
             self.build_tree('eq', 2)
         elif token == 'ne':
-            self.read('KEYWORD', 'ne')
+            if self.tokens[-1][1] == 'ne':
+                self.read(token_types.KEYWORD, 'ne')
+            else:
+                self.read(token_types.OPERATOR, '!=')
             self.A()
             self.build_tree('ne', 2)
 
     def A(self):
         # haddle uniary operators
         if self.tokens[-1][1] =="+":
-            self.read('OPERATOR', '+')
+            self.read(token_types.OPERATOR, '+')
             self.At()
         elif self.tokens[-1][1] == "-":
-            self.read('OPERATOR', '-')
+            self.read(token_types.OPERATOR, '-')
             self.At()
-            self.build_tree('neg', 2)
+            self.build_tree('neg', 1)
         else:
             self.At()
         # handle operators with two operands
         while self.tokens and self.tokens[-1][1] in ['+', '-']:
             if self.tokens[-1][1] == '+':
-                self.read('PUNCTUATION', '+')
+                self.read(token_types.OPERATOR, '+')
                 self.At()
                 self.build_tree('+', 2)
             else:
-                self.read('PUNCTUATION', '-')
+                self.read(token_types.OPERATOR, '-')
                 self.At()
                 self.build_tree('-', 2)
 
@@ -180,33 +216,36 @@ class Parser:
         self.Af()
         while self.tokens and self.tokens[-1][1] in ['*', '/']:
             if self.tokens[-1][1] == '*':
-                self.read('PUNCTUATION', '*')
+                self.read(token_types.OPERATOR, '*')
                 self.Af()
                 self.build_tree('*', 2)
             else:
-                self.read('PUNCTUATION', '/')
+                self.read(token_types.OPERATOR, '/')
                 self.Af()
                 self.build_tree('/', 2)
 
     def Af(self):
         self.Ap()
         while self.tokens and self.tokens[-1][1] == '**':
-            self.read('PUNCTUATION', '**')
+            self.read(token_types.OPERATOR, '**')
             self.Af()
             self.build_tree('**', 2)
 
     def Ap(self):
         self.R()
         while self.tokens and self.tokens[-1][1] == '@':
-            self.read('PUNCTUATION', '@')
-            self.read('IDENTIFIER', self.tokens[-1][1])
-            self.build_tree('IDENTIFIER', 0)
-            self.R()
-            self.build_tree('@', 3)
+            self.read(token_types.OPERATOR, '@')
+            if self.tokens and self.tokens[-1][0] == token_types.IDENTIFIER:
+                self.read(token_types.IDENTIFIER, self.tokens[-1][1])
+                self.build_tree('<ID:'+ self.tokens[-1][1] + '>', 0)
+                self.R()
+                self.build_tree('@', 3)
+            else:
+                raise SyntaxError("Expected identifier after '@'")
 
     def R(self):
         self.Rn()
-        while self.tokens and (self.tokens[-1][0] in ["IDENTIFIER", "INTEGER", "STRING"] or
+        while self.tokens and (self.tokens[-1][0] in [token_types.IDENTIFIER,token_types.INTEGER,token_types.STRING] or
                                self.tokens[-1][1] in ["true", "false", "nil", "dummy", "("]):
             self.Rn()
             self.build_tree('gamma', 2)
@@ -215,30 +254,31 @@ class Parser:
         if not self.tokens:
             raise SyntaxError("Unexpected end of input")
         token_type, token = self.tokens[-1]
-        if token_type == 'IDENTIFIER':
-            self.read('IDENTIFIER', token)
-            self.build_tree('IDENTIFIER', 0)
-        elif token_type == 'INTEGER':
-            self.read('INTEGER', token)
-            self.build_tree('INTEGER', 0)
-        elif token_type == 'STRING':
-            self.read('STRING', token)
-            self.build_tree('STRING', 0)
+        print(token_type, token)
+        if token_type == token_types.IDENTIFIER:
+            self.read(token_types.IDENTIFIER, token)
+            self.build_tree('<ID:'+token+'>', 0)
+        elif token_type == token_types.INTEGER:
+            self.read(token_types.INTEGER, token)
+            self.build_tree('<INT:'+token+'>', 0)
+        elif token_type == token_types.STRING:
+            self.read(token_types.STRING, token)
+            self.build_tree('<STR:\''+token+'\'>', 0)
         elif token == 'true':
-            self.read('KEYWORD', 'true')
+            self.read(token_types.KEYWORD, 'true')
             self.build_tree('true', 0)
         elif token == 'false':
-            self.read('KEYWORD', 'false')
+            self.read(token_types.KEYWORD, 'false')
             self.build_tree('false', 0)
         elif token == 'nil':
-            self.read('KEYWORD', 'nil')
+            self.read(token_types.KEYWORD, 'nil')
             self.build_tree('nil', 0)
         elif token == '(':
-            self.read('PUNCTUATION', '(')
+            self.read(token_types.PUNCTUATION , '(')
             self.E()
-            self.read('PUNCTUATION', ')')
+            self.read(token_types.PUNCTUATION, ')')
         elif token == 'dummy':
-            self.read('KEYWORD', 'dummy')
+            self.read(token_types.KEYWORD, 'dummy')
             self.build_tree('dummy', 0)
         else:
             raise SyntaxError(f"Unexpected token {token}")
@@ -246,23 +286,23 @@ class Parser:
     def D(self):
         self.Da()
         if self.tokens and self.tokens[-1][1] == 'within':
-            self.read('KEYWORD', 'within')
+            self.read(token_types.KEYWORD, 'within')
             self.D()
             self.build_tree('within', 2)
 
     def Da(self):
         self.Dr()
-        n = 1
+        n = 0
         while self.tokens and self.tokens[-1][1] == 'and':
-            self.read('KEYWORD', 'and')
+            self.read(token_types.KEYWORD, 'and')
             self.Dr()
             n += 1
-        if n > 1:
-            self.build_tree('and', n)
+        if n > 0:
+            self.build_tree('and', n+1)
 
     def Dr(self):
         if self.tokens and self.tokens[-1][1] == 'rec':
-            self.read('KEYWORD', 'rec')
+            self.read(token_types.KEYWORD, 'rec')
             self.Db()
             self.build_tree('rec', 1)
         else:
@@ -272,71 +312,83 @@ class Parser:
         if not self.tokens:
             raise SyntaxError("Unexpected end of input")
         token_type, token = self.tokens[-1]
-        if token_type == 'IDENTIFIER':
-            self.read('IDENTIFIER', token)
-            self.build_tree('IDENTIFIER', 0)
-            n = 1
-            while self.tokens and self.tokens[-1][1] != '=':
-                self.Vb()
-                n += 1
-            self.read('OPERATOR', '=')
-            self.E()
-            self.build_tree('fcn_form', 2)
-        elif token_type == 'PUNCTUATION' and token == '(':
-            self.read('PUNCTUATION', '(')
+        if token_type == token_types.IDENTIFIER:
+            self.read(token_types.IDENTIFIER, token)
+            self.build_tree('<ID:'+ token + '>', 0)
+
+            if self.tokens and self.tokens[-1][1] in  ['=',',']:
+                self.Vl()
+                self.read(token_types.OPERATOR, '=')
+                self.E()
+                self.build_tree('=', 2)
+            else:
+                n= 0
+                while self.tokens[-1][0] == token_types.IDENTIFIER or self.tokens[-1][1] == '(':
+                    self.Vb()
+                    n += 1
+                if n == 0:
+                    raise SyntaxError("Expected identifier or '(' after identifier")
+                if self.tokens and self.tokens[-1][1] == '=':
+                    self.read(token_types.OPERATOR, '=')
+                    self.E()
+                    self.build_tree('function_form', n+2)
+                else:
+                    raise SyntaxError("Expected '=' after identifier")
+        elif token_type == token_types.PUNCTUATION and token == '(':
+            self.read( token_types.PUNCTUATION, '(')
             self.D()
-            self.read('PUNCTUATION', ')')
-        else:
-            self.v1()
-            self.read('OPERATOR', '=')
-            self.E()
-            self.build_tree('=', 2)
+            self.read(token_types.PUNCTUATION, ')')
 
     def Vb(self):
         if not self.tokens:
             raise SyntaxError("Unexpected end of input")
         token_type, token = self.tokens[-1]
-        if token_type == 'IDENTIFIER':
-            self.read('IDENTIFIER', token)
-            self.build_tree('IDENTIFIER', 0)
+        if token_type == token_types.IDENTIFIER:
+            self.read(token_types.IDENTIFIER, token)
+            self.build_tree('<ID:'+ token + '>', 0)
+
         elif token == '(':
-            self.read('PUNCTUATION', '(')
-            self.Vl()
-            self.read('PUNCTUATION', ')')
-            self.build_tree('()', 0)
+            self.read(token_types.PUNCTUATION, '(')
+
+            token_type, token = self.tokens[-1]
+            if token_type == token_types.PUNCTUATION and token == ')':
+                self.read(token_types.PUNCTUATION, ')')
+                self.build_tree('()', 0)
+            elif token_type == token_types.IDENTIFIER:
+                self.read(token_types.IDENTIFIER, token)
+                self.build_tree('<ID:'+ token + '>', 0)
+                self.Vl()
+                if self.tokens and self.tokens[-1][1] == ')':
+                    self.read(token_types.PUNCTUATION, ')')   
+                else:
+                    raise SyntaxError("Expected ')' after identifier")
+            else:
+                raise SyntaxError("Expected identifier or ')' after '('")
         else:
             raise SyntaxError(f"Unexpected token {token}")
-        
+           
     def Vl(self):
-        n = 1
+        n = 0
         while self.tokens and self.tokens[-1][1] == ',':
+            self.read(token_types.PUNCTUATION, ',')
             if not self.tokens:
                 raise SyntaxError("Unexpected end of input")
             token_type, token = self.tokens[-1]
-            if token_type == 'IDENTIFIER':
-                self.read('IDENTIFIER', token)
-                self.build_tree('IDENTIFIER', 0)
-                while self.tokens and self.tokens[-1][1] == ',':
-                    self.read('PUNCTUATION', ',')
-                    self.Vl()
-            else:
-                raise SyntaxError(f"Unexpected token {token}")
-        if n > 1:
-            self.build_tree(',', n)
+            self.read(token_types.IDENTIFIER, token)
+            self.build_tree('<ID:'+ token + '>', 0)
+            n += 1
+
+        if n > 0:
+            self.build_tree(',', n+1)
 
 if __name__ == "__main__":
     scaner = Scanner()
-    with open('Inputs\Q1.txt', 'r') as file:
+    with open('Inputs\Q8.txt', 'r') as file:
         code = file.read()
-        print("Input code:", code)
-        print("Tokenized output:")
-        print("========================================")
         tokens = scaner.tokenize(code)
         for i in tokens: print(i)
-        print("========================================")
         tokens.reverse()
         parser = Parser(tokens)
-        print("Parse tree:")
         parser.parse()
         parser.stack[0].print_tree()
     
