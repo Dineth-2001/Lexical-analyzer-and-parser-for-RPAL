@@ -8,12 +8,22 @@ all: run
 # Target to run the RPAL interpreter with a default input file (e.g., Q1.txt)
 # Uses Windows-style path as specified: python .\myrpal.py file_name
 run:
-	python .\myrpal.py Inputs\Q1.txt
+	python .\myrpal.py <file_path>
 
 # Target to run with AST output using the -ast switch
 # Prints only the abstract syntax tree as required
 run-ast:
-	python .\myrpal.py Inputs\Q1.txt -ast
+	python .\myrpal.py -ast <file_path>
+
+# Target to run with AST output using the -st switch
+# Prints only the ST
+run-st:
+	python .\myrpal.py -st <file_path>
+
+# Target to run with code using the -l switch
+# Prints only the code
+run-st:
+	python .\myrpal.py -l <file_path>
 
 # Target to install dependencies 
 setup:
