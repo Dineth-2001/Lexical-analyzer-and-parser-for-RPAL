@@ -9,7 +9,7 @@ from standardiser.standardiser import make_standardized_tree
 control_structures = []
 count = 0
 control = []
-stack = Stack("CSE")                        # Stack for the CSE machine
+stack = Stack("CSE")    # Stack for the CSE machine
 environments = [Environment(0, None)]
 current_environment = 0
 builtInFunctions = ["Order", "Print", "print", "Conc", "Stern", "Stem", "Isinteger", "Istruthvalue", "Isstring", "Istuple", "Isfunction", "ItoS"]
