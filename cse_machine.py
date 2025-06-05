@@ -310,6 +310,7 @@ def apply_rules():
                 stack.push(rand_1 and rand_2)
             elif (symbol == "aug"):
                 if (type(rand_2) == tuple):
+                    
                     stack.push(rand_1 + rand_2)
                 else:
                     stack.push(rand_1 + (rand_2,))

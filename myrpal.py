@@ -6,7 +6,7 @@ import os
 from scanner.scanner import tokenize_and_screen
 from parser.parser import parse
 from standardiser.standardiser import make_standardized_tree
-from cse_machine.cse_machine import get_result
+from cse_machine import get_result
 
 def main():
     # Check for correct number of arguments
