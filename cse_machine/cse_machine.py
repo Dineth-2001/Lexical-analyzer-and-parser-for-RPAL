@@ -9,7 +9,7 @@ from standardiser.standardiser import make_standardized_tree
 control_structures = []
 count = 0
 control = []
-stack = Stack("CSE")                        # Stack for the CSE machine
+stack = Stack("CSE")    # Stack for the CSE machine
 environments = [Environment(0, None)]
 current_environment = 0
 builtInFunctions = ["Order", "Print", "print", "Conc", "Stern", "Stem", "Isinteger", "Istruthvalue", "Isstring", "Istuple", "Isfunction", "ItoS"]
@@ -127,6 +127,7 @@ def built_in(function, argument):
             if "\\t" in argument:
                 argument = argument.replace("\\t", "\t")
 
+        print(argument, end="")
         stack.push(argument)
 
     # The Conc function concatenates two strings.
@@ -394,15 +395,14 @@ def get_result(st):
         return ""
 
 if __name__ == "__main__":
-    with open('Inputs/Q6.txt', 'r') as file:
+    with open('Inputs/Q.txt', 'r') as file:
         code = file.read()
         tokens = tokenize_and_screen(code)
         tokens.reverse()  # Reverse the tokens to use the list as a stack
 
         ast = parse(tokens)
         standardized_tree = make_standardized_tree(ast)
-
-        result = get_result(standardized_tree)
+        print("Output of the above program is:")
+        get_result(standardized_tree)
         
-        if result:
-            print(result)
+        
