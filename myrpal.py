@@ -77,11 +77,9 @@ def main():
             sys.exit(0)
             
         # Step 4: Generate and run CSE machine code
-        result = get_result(standardized_tree)
+        print("Output of the above program is:")
+        get_result(standardized_tree)
         
-        # Print result if not empty
-        if result:
-            print(result)
             
     except SyntaxError as e:
         print(f"Syntax Error: {e}")
