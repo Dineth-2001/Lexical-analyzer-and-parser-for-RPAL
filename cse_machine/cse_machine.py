@@ -3,7 +3,7 @@ from data_structures.cse_enviroment import Environment
 from data_structures.control_structures import Lambda, Delta, Tau, Eta
 from scanner.scanner import tokenize_and_screen
 from parser.parser import parse
-from standardiser.standardiser import make_standardized_tree
+from standardiser.standardiser import generate_standardized_tree
 
 
 control_structures = []
@@ -401,7 +401,7 @@ if __name__ == "__main__":
         tokens.reverse()  # Reverse the tokens to use the list as a stack
 
         ast = parse(tokens)
-        standardized_tree = make_standardized_tree(ast)
+        standardized_tree = generate_standardized_tree(ast)
         print("Output of the above program is:")
         get_result(standardized_tree)
         

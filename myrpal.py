@@ -5,7 +5,7 @@ import os
 
 from scanner.scanner import tokenize_and_screen
 from parser.parser import parse
-from standardiser.standardiser import make_standardized_tree
+from standardiser.standardiser import generate_standardized_tree
 from cse_machine.cse_machine import get_result
 
 def main():
@@ -69,7 +69,7 @@ def main():
             sys.exit(0)
             
         # Step 3: Standardize the tree
-        standardized_tree = make_standardized_tree(ast)
+        standardized_tree = generate_standardized_tree(ast)
         
         # If -st switch, show the standardized tree and exit
         if show_st:
