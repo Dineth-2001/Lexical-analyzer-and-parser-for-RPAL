@@ -9,184 +9,159 @@ from standardiser.standardiser import generate_standardized_tree
 control_structures = []
 count = 0
 control = []
-stack = Stack("CSE")    # Stack for the CSE machine
+stack = Stack("CSE")     
 environments = [Environment(0, None)]
 current_environment = 0
 builtInFunctions = ["Order", "Print", "print", "Conc", "Stern", "Stem", "Isinteger", "Istruthvalue", "Isstring", "Istuple", "Isfunction", "ItoS"]
 print_present = False
 
 
-def generate_control_structure(root, i):
+def generate_control_structure(node, index):
     global count
-    
-    while(len(control_structures) <= i):
+
+    while len(control_structures) <= index:
         control_structures.append([])
 
-    # When lambda is encountered, we have to generate a new control structure.
-    if (root.value == "lambda"):
+    # Case: Lambda node – starts a new control structure
+    if node.value == "lambda":
         count += 1
-        left_child = root.children[0]
-        if (left_child.value == ","):
-            temp = Lambda(count)
-            
-            x = ""
-            for child in left_child.children:
-                x += child.value[4:-1] + ","
-            x = x[:-1]
-            
-            temp.bounded_variable = x
-            control_structures[i].append(temp)
+        lambda_id = count
+        param_node = node.children[0]
+        lambda_obj = Lambda(lambda_id)
+
+        if param_node.value == ",":
+            # Multiple parameters
+            bound_vars = ",".join(child.value[4:-1] for child in param_node.children)
         else:
-            temp = Lambda(count)
-            temp.bounded_variable = left_child.value[4:-1]
-            control_structures[i].append(temp)
+            # Single parameter
+            bound_vars = param_node.value[4:-1]
 
-        for child in root.children[1:]:
-            generate_control_structure(child, count)
+        lambda_obj.bounded_variable = bound_vars
+        control_structures[index].append(lambda_obj)
 
-    elif (root.value == "->"):
+        # Recurse into the body of the lambda
+        for child in node.children[1:]:
+            generate_control_structure(child, lambda_id)
+
+    # Case: Conditional expression (if-then-else)
+    elif node.value == "->":
         count += 1
-        temp = Delta(count)
-        control_structures[i].append(temp)
-        generate_control_structure(root.children[1], count)
+        then_id = count
+        control_structures[index].append(Delta(then_id))
+        generate_control_structure(node.children[1], then_id)
+
         count += 1
-        temp = Delta(count)
-        control_structures[i].append(temp)
-        generate_control_structure(root.children[2], count)
-        control_structures[i].append("beta")
-        generate_control_structure(root.children[0], i)
+        else_id = count
+        control_structures[index].append(Delta(else_id))
+        generate_control_structure(node.children[2], else_id)
 
-    elif (root.value == "tau"):
-        n = len(root.children)
-        temp = Tau(n)
-        control_structures[i].append(temp)
-        for child in root.children:
-            generate_control_structure(child, i)
+        control_structures[index].append("beta")
+        # Recurse into the condition
+        generate_control_structure(node.children[0], index)
 
+    # Case: Tuple (tau) node
+    elif node.value == "tau":
+        tuple_size = len(node.children)
+        control_structures[index].append(Tau(tuple_size))
+        for child in node.children:
+            generate_control_structure(child, index)
+
+    # Default case: simple value or operator
     else:
-        control_structures[i].append(root.value)
-        for child in root.children:
-            generate_control_structure(child, i)
+        control_structures[index].append(node.value)
+        for child in node.children:
+            generate_control_structure(child, index)
 
-# This function is used for tokens that begin with '<' and end with '>'.
-def lookup(name):
-    name = name[1:-1]
-    info = name.split(":")
-    
-    if (len(info) == 1):
-        value = info[0]
+# Resolves tokens enclosed in '<...>' to their actual values.
+def lookup(token):
+    stripped = token[1:-1]
+    parts = stripped.split(":")
+
+    # Handle simple tokens like <Y*>, <true>, <nil>
+    if len(parts) == 1:
+        key = parts[0]
     else:
-        data_type = info[0]
-        value = info[1]
-    
-        if data_type == "INT":
-            return int(value)
-        
-        # The rpal.exe program detects srings only when they begin with ' and end with '.
-        # Our code must emulate this behaviour.
-        elif data_type == "STR":
-            return value.strip("'")
-        elif data_type == "ID":
-            if (value in builtInFunctions):
-                return value
-            else:
-                try:
-                    value = environments[current_environment].variables[value]
-                except KeyError:
-                    print("Undeclared Identifier: " + value)
-                    exit(1)
-                else:
-                    return value
-            
-    if value == "Y*":
+        token_type, key = parts[0], parts[1]
+
+        if token_type == "INT":
+            return int(key)
+
+        elif token_type == "STR":
+            return key.strip("'")
+
+        elif token_type == "ID":
+            if key in builtInFunctions:
+                return key
+            try:
+                return environments[current_environment].variables[key]
+            except KeyError:
+                print(f"Undeclared Identifier: {key}")
+                exit(1)
+
+    # Handle special cases
+    if key == "Y*":
         return "Y*"
-    elif value == "nil":
+    elif key == "nil":
         return ()
-    elif value == "true":
+    elif key == "true":
         return True
-    elif value == "false":
+    elif key == "false":
         return False
     
-def built_in(function, argument):
+def built_in(func_name, arg):
     global print_present
-    
-    # The Order function returns the length of a tuple.  
-    if (function == "Order"):
-        order = len(argument)
-        stack.push(order)
 
-    # The Print function prints the output to the command prompt.
-    elif (function == "Print" or function == "print"):
-        # We should print the output only when the 'Print' function is called in the program.
-        print_present = True
-        
-        # If there are escape characters in the string, we need to format it properly.
-        if type(argument) == str:
-            if "\\n" in argument:
-                argument = argument.replace("\\n", "\n")
-            if "\\t" in argument:
-                argument = argument.replace("\\t", "\t")
+    match func_name:
+        case "Order":
+            # Returns the number of elements in a tuple
+            stack.push(len(arg))
 
-        print(argument, end="")
-        stack.push(argument)
+        case "Print" | "print":
+            print_present = True
+            # Replace escape characters with actual formatting
+            if isinstance(arg, str):
+                arg = arg.replace("\\n", "\n").replace("\\t", "\t")
+            print(arg, end="")
+            stack.push(arg)
 
-    # The Conc function concatenates two strings.
-    elif (function == "Conc"):
-        stack_symbol = stack.pop()
-        control.pop()
-        temp = argument + stack_symbol
-        stack.push(temp)
+        case "Conc":
+            second_str = stack.pop()
+            control.pop()
+            stack.push(arg + second_str)
 
-    # The Stern function returns the string without the first letter.
-    elif (function == "Stern"):
-        stack.push(argument[1:])
+        case "Stern":
+            # Return string without first character
+            stack.push(arg[1:] if isinstance(arg, str) and len(arg) > 0 else "")
 
-    # The Stem function returns the first letter of the given string.
-    elif (function == "Stem"):
-        stack.push(argument[0])
+        case "Stem":
+            # Return first character of string
+            stack.push(arg[0] if isinstance(arg, str) and len(arg) > 0 else "")
 
-    # The Isinteger function checks if the given argument is an integer.
-    elif (function == "Isinteger"):
-        if (type(argument) == int):
-            stack.push(True)
-        else:
-            stack.push(False)
+        case "Isinteger":
+            stack.push(isinstance(arg, int))
 
-    # The Istruthvalue function checks if the given argument is a boolean value.               
-    elif (function == "Istruthvalue"):
-        if (type(argument) == bool):
-            stack.push(True)
-        else:
-            stack.push(False)
+        case "Istruthvalue":
+            stack.push(isinstance(arg, bool))
 
-    # The Isstring function checks if the given argument is a string.
-    elif (function == "Isstring"):
-        if (type(argument) == str):
-            stack.push(True)
-        else:
-            stack.push(False)
+        case "Isstring":
+            stack.push(isinstance(arg, str))
 
-    # The Istuple function checks if the given argument is a tuple.
-    elif (function == "Istuple"):
-        if (type(argument) == tuple):
-            stack.push(True)
-        else:
-            stack.push(False)
+        case "Istuple":
+            stack.push(isinstance(arg, tuple))
 
-    # The Isfunction function checks if the given argument is a built-in function.
-    elif (function == "Isfunction"):
-        if (argument in builtInFunctions):
-            return True
-        else:
-            False
-    
-    # The ItoS function converts integers to strings.        
-    elif (function == "ItoS"):
-        if (type(argument) == int):
-            stack.push(str(argument))
-        else:
-            print("Error: ItoS function can only accept integers.")
-            exit()
+        case "Isfunction":
+            stack.push(arg in builtInFunctions)
+
+        case "ItoS":
+            if isinstance(arg, int):
+                stack.push(str(arg))
+            else:
+                print("Error: ItoS function expects an integer.")
+                exit(1)
+
+        case _:
+            print(f"Unknown built-in function: {func_name}")
+            exit(1)
 
 def apply_rules():
     op = ["+", "-", "*", "/", "**", "gr", "ge", "ls", "le", "eq", "ne", "or", "&", "aug"]
@@ -346,25 +321,23 @@ def apply_rules():
         elif (symbol == "Y*"):
             stack.push(symbol)
 
-    # Lambda expression becomes a lambda closure when its environment is determined.
+    # Lambda expression becomes a lambda closure 
     if type(stack[0]) == Lambda:
         stack[0] = "[lambda closure: " + str(stack[0].bounded_variable) + ": " + str(stack[0].number) + "]"
          
     if type(stack[0]) == tuple:          
-        # The rpal.exe program prints the boolean values in lowercase. Our code must emulate this behaviour. 
+        # Emulating printing the boolean values in lowercase
         for i in range(len(stack[0])):
             if type(stack[0][i]) == bool:
                 stack[0] = list(stack[0])
                 stack[0][i] = str(stack[0][i]).lower()
                 stack[0] = tuple(stack[0])
                 
-        # The rpal.exe program does not print the comma when there is only one element in the tuple.
-        # Our code must emulate this behaviour.  
+        # Program does not print the comma when there is only one element in the tuple  
         if len(stack[0]) == 1:
             stack[0] = "(" + str(stack[0][0]) + ")"
         
-        # The rpal.exe program does not print inverted commas when an element in the tuple is a string.
-        # Our code must emulate this behaviour too. 
+        # The program does not print inverted commas when an element in the tuple is a string 
         else: 
             if any(type(element) == str for element in stack[0]):
                 temp = "("
@@ -373,11 +346,10 @@ def apply_rules():
                 temp = temp[:-2] + ")"
                 stack[0] = temp
                 
-    # The rpal.exe program prints the boolean values in lowercase. Our code must emulate this behaviour.    
+    # The program prints the boolean values in lowercase  
     if stack[0] == True or stack[0] == False:
         stack[0] = str(stack[0]).lower()
 
-# The following function is called from the myrpal.py file.
 def get_result(st):
     global control    
     generate_control_structure(st,0) 
@@ -398,7 +370,7 @@ if __name__ == "__main__":
     with open('Inputs/Q.txt', 'r') as file:
         code = file.read()
         tokens = tokenize_and_screen(code)
-        tokens.reverse()  # Reverse the tokens to use the list as a stack
+        tokens.reverse()  # Reverse the tokens 
 
         ast = parse(tokens)
         standardized_tree = generate_standardized_tree(ast)
