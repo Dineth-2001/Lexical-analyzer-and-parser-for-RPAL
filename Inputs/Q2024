@@ -1,0 +1,27 @@
+let merge(A,B) = 
+    Order A eq 0 ->
+        B
+    |
+    Order B eq 0 ->
+        A
+    |
+    iterate(A,B,1,1,nil)
+where
+    rec iterate(A,B,i,j,out) =
+        Order A ls i ->
+            add(B,j,out)
+        |
+        Order B ls i ->
+            add(A,i,out)
+        |
+        A i ls B j ->
+            iterate(A,B,i+1,j,out aug A i)
+        |
+            iterate(A,B,i,j+1,out aug B j)
+where
+    rec add(A,i,out) =
+        Order A ls i ->
+            out
+        |
+            add(A,i+1,out aug A i)
+in print(merge(nil, (1,2,3))) // Output: nil
