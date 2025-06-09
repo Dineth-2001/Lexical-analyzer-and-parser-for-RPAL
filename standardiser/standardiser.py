@@ -177,8 +177,7 @@ if __name__ == "__main__":
         code = file.read()
         tokens = tokenize_and_screen(code)
 
-        # Reverse the tokens so that we can use the list as a stack,
-        # where popping from the front (index 0) simulates popping from the top of the original token sequence
+        # Reverse the tokens
         tokens.reverse()
  
         ast = parse(tokens)
