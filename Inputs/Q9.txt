@@ -1,0 +1,10 @@
+let innerproduct(x,y) = iterate(x,y,1,0)
+    where rec iterate(x,y,n,c_sum) = 
+        Order x eq Order y ->
+            Order x ls n -> 
+                c_sum 
+            |
+                iterate(x,y,n+1, c_sum+ x n * y n)
+        |
+            'error'
+in print(innerproduct((1,2,3,4,5),(1,2,3,4,5)))
