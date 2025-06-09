@@ -50,6 +50,9 @@ def tokenize_and_screen(code):
             tokens.append((TokenType.UNKNOWN, code[i]))
             i += 1
 
+    # Remove comments and whitespace tokens
+    tokens = [token for token in tokens if token[0] not in (TokenType.COMMENT, TokenType.WHITESPACE)]
+    
     return tokens
 
  
